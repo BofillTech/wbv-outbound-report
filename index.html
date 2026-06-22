@@ -294,11 +294,11 @@ async function buildLive(s,e){
       a.calls.made++;if(i>=0)a.trend.made[i]++;
       if(r.connected&&!r.voicemail){a.calls.connected++;if(i>=0)a.trend.connected[i]++;if(r.sentiment&&a.sentiment[r.sentiment]!==undefined)a.sentiment[r.sentiment]++;}
       else{a.calls.voicemail++;}
-      if(r.summary&&r.connected)leads.push({name:r.contact_name||r.contact_phone,ch:'call',date:r.occurred_at.slice(0,10),agent:r.agent,sent:r.sentiment,sum:r.summary});
+      if(r.summary&&r.connected)leads.push({name:r.contact_name||null,phone:r.contact_phone,ch:'call',date:r.occurred_at.slice(0,10),agent:r.agent,sent:r.sentiment,sum:r.summary});
     }else if(r.channel==='text'&&r.direction==='outgoing'){
       a.texts.sent++;if(r.msg_status==='delivered')a.texts.delivered++;
       if(r.replied){a.texts.replied++;if(r.sentiment&&a.textSent[r.sentiment]!==undefined)a.textSent[r.sentiment]++;}
-      if(r.summary&&r.replied)leads.push({name:r.contact_name||r.contact_phone,ch:'text',date:r.occurred_at.slice(0,10),agent:r.agent,sent:r.sentiment,sum:r.summary});
+      if(r.summary&&r.replied)leads.push({name:r.contact_name||null,phone:r.contact_phone,ch:'text',date:r.occurred_at.slice(0,10),agent:r.agent,sent:r.sentiment,sum:r.summary});
     }
   });
   return {range:liveRange(s,e),x,trendLabel:singleDay?'by hour':'by day',agents,leads};
@@ -349,7 +349,7 @@ async function render(){
     <div class="kpi"><div class="label">Text reply rate</div><div class="val num">${replyRate}%</div><div class="meta">${d.texts.replied} of ${d.texts.delivered} delivered</div></div>`;
 
   const made=d.calls.made;
-  document.getElementById('funnel').innerHTML=funnelRows([['Calls made',made,C.ocean],['Connected',d.calls.connected,C.oceanDeep],['Interested',d.sentiment.interested,C.green]],made);
+  document.getElementById('funnel').innerHTML=funnelRows([['Calls made',made,C.ocean],['Connected',d.calls.connected,C.oceanDeep],['Voicemail / no answer',d.calls.voicemail,C.amber],['Interested',d.sentiment.interested,C.green]],made);
   document.getElementById('textFunnel').innerHTML=funnelRows([['Sent',d.texts.sent,C.sand],['Delivered',d.texts.delivered,'#B07D26'],['Replied',d.texts.replied,C.ocean],['Interested',d.textSent.interested,C.green]],d.texts.sent);
 
   kill();
@@ -394,9 +394,10 @@ async function render(){
 
 function funnelRows(items,base){
   return items.map(([label,val,color])=>{
-    const w=Math.max(8,Math.round(val/base*100));
+    const p=base?Math.round(val/base*100):0;
+    const w=Math.max(8,p);
     return `<div class="frow"><div class="fl">${label}</div>
-      <div class="ftrack"><div class="fbar" style="width:${w}%;background:${color}">${Math.round(val/base*100)}%</div></div>
+      <div class="ftrack"><div class="fbar" style="width:${w}%;background:${color}">${p}%</div></div>
       <div class="fv num">${val}</div></div>`;
   }).join('');
 }
@@ -446,8 +447,9 @@ function activeWindow(){
   const w=map[state.period]||map.last7;return {s:w[0],e:w[1]};
 }
 const fmtDate=iso=>{const[Y,M,D]=iso.split('-');return (+M)+'-'+(+D)+'-'+Y.slice(2);};
+const fmtPhone=p=>{if(!p)return'';const d=(''+p).replace(/\D/g,'').slice(-10);return d.length===10?`(${d.slice(0,3)}) ${d.slice(3,6)}-${d.slice(6)}`:(''+p);};
 const isPos=l=>l.sent==='interested'||l.sent==='callback';
-const TAG={interested:'Interested',callback:'Callback',neutral:'Neutral',notInterested:'Not interested'};
+const TAG={interested:'Interested',callback:'Callback',neutral:'Neutral',notInterested:'Not interested',wrong:'Wrong number'};
 
 function renderLeads(){
   const w=activeWindow(), f=state.leadFilter;
@@ -466,14 +468,16 @@ function renderLeads(){
   const list=document.getElementById('leadlist');
   if(!rows.length){list.innerHTML='<div class="lempty">No interactions match this filter for the selected range and agent.</div>';return;}
   list.innerHTML=rows.map((l,i)=>{
-    const phone='('+AREA[i%AREA.length]+') 555-'+String(100+(i*37)%900).padStart(4,'0');
+    const realPhone=l.phone?fmtPhone(l.phone):('('+AREA[i%AREA.length]+') 555-'+String(100+(i*37)%900).padStart(4,'0'));
+    const title=l.name||realPhone;
+    const rightPhone=l.name?`<span class="lphone num">${realPhone}</span>`:'';
     return `<div class="lead">
       <span class="ldot s-${l.sent}"></span>
       <div class="lmain">
-        <div class="lname">${l.name}<span class="lch ch-${l.ch}">${l.ch==='call'?'Called':'Texted'}</span><span class="lmeta">${fmtDate(l.date)} · ${l.agent}</span></div>
+        <div class="lname">${title}<span class="lch ch-${l.ch}">${l.ch==='call'?'Called':'Texted'}</span><span class="lmeta">${fmtDate(l.date)} · ${l.agent}</span></div>
         <div class="lsum">${l.sum}</div>
       </div>
-      <div class="lright"><span class="ltag t-${l.sent}">${TAG[l.sent]}</span><span class="lphone num">${phone}</span></div>
+      <div class="lright"><span class="ltag t-${l.sent||'neutral'}">${TAG[l.sent]||'—'}</span>${rightPhone}</div>
     </div>`;
   }).join('');
 }
