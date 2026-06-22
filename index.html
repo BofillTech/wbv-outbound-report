@@ -1,0 +1,487 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>White Bay Villas — Outbound Performance</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+  :root{
+    --bg:#F4F2EC; --surface:#FFFFFF; --ink:#16282E; --ink-soft:#5A6B70; --line:#E4E0D6;
+    --ocean:#0E7C7B; --ocean-deep:#0B5A59; --sand:#C8902E; --green:#2E9E6B; --amber:#E0A93D;
+    --coral:#D9695A; --slate:#8497A0; --hazel:#0E7C7B; --rachel:#C8902E;
+    --shadow:0 1px 2px rgba(22,40,46,.04),0 6px 20px rgba(22,40,46,.06);
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{background:var(--bg);color:var(--ink);font-family:'Inter',-apple-system,BlinkMacSystemFont,sans-serif;font-size:14px;line-height:1.5;-webkit-font-smoothing:antialiased;padding:32px 28px 56px}
+  .wrap{max-width:1180px;margin:0 auto}
+  .num{font-variant-numeric:tabular-nums;font-feature-settings:"tnum"}
+
+  header{display:flex;align-items:flex-end;justify-content:space-between;flex-wrap:wrap;gap:18px;margin-bottom:18px}
+  .titles h1{font-family:'Archivo',sans-serif;font-weight:800;font-size:24px;letter-spacing:-.02em;line-height:1.1}
+  .titles .sub{color:var(--ink-soft);font-size:13px;margin-top:5px}
+  .titles .accent{color:var(--ocean)}
+  .controls{display:flex;align-items:center;gap:12px}
+  .pill{font-family:'Archivo',sans-serif;font-size:10px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:var(--sand);background:#FBF3E2;border:1px solid #EEDDB8;padding:6px 10px;border-radius:999px}
+  .agentsel{position:relative}
+  .agentsel select{appearance:none;font-family:'Archivo',sans-serif;font-weight:600;font-size:13px;color:var(--ink);background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:9px 34px 9px 14px;cursor:pointer;box-shadow:var(--shadow)}
+  .agentsel::after{content:"";position:absolute;right:13px;top:50%;width:7px;height:7px;border-right:2px solid var(--ink-soft);border-bottom:2px solid var(--ink-soft);transform:translateY(-70%) rotate(45deg);pointer-events:none}
+
+  /* filter bar */
+  .filterbar{display:flex;align-items:center;gap:16px;flex-wrap:wrap;background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:12px 16px;box-shadow:var(--shadow);margin-bottom:20px}
+  .seg{display:inline-flex;background:#EAE6DC;border-radius:10px;padding:3px;border:1px solid var(--line)}
+  .seg button{font-family:'Archivo',sans-serif;font-weight:600;font-size:13px;color:var(--ink-soft);background:none;border:none;padding:7px 15px;border-radius:7px;cursor:pointer;transition:.15s;white-space:nowrap}
+  .seg button.on{background:var(--surface);color:var(--ink);box-shadow:var(--shadow)}
+  .vr{width:1px;height:26px;background:var(--line)}
+  .picker{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--ink-soft)}
+  .picker input[type=date]{font-family:'Inter',sans-serif;font-size:13px;color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:7px 9px}
+  .picker .apply{font-family:'Archivo',sans-serif;font-weight:600;font-size:13px;color:#fff;background:var(--ocean);border:none;border-radius:8px;padding:8px 14px;cursor:pointer}
+  .picker .apply:hover{background:var(--ocean-deep)}
+  .rangelabel{margin-left:auto;display:flex;align-items:center;gap:9px;color:var(--ink-soft);font-size:13px;font-weight:500}
+  .rangelabel .dot{width:6px;height:6px;border-radius:50%;background:var(--ocean)}
+
+  .kpis{display:grid;grid-template-columns:repeat(6,1fr);gap:14px;margin-bottom:18px}
+  .kpi{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:16px 16px 15px;box-shadow:var(--shadow);position:relative;overflow:hidden}
+  .kpi::before{content:"";position:absolute;left:0;top:0;bottom:0;width:3px;background:var(--ocean)}
+  .kpi.k-green::before{background:var(--green)} .kpi.k-amber::before{background:var(--amber)} .kpi.k-sand::before{background:var(--sand)}
+  .kpi .label{font-size:11px;color:var(--ink-soft);font-weight:500;text-transform:uppercase;letter-spacing:.05em}
+  .kpi .val{font-family:'Archivo',sans-serif;font-weight:800;font-size:30px;letter-spacing:-.02em;margin-top:8px;line-height:1}
+  .kpi .meta{font-size:11.5px;color:var(--ink-soft);margin-top:6px}
+  .kpi .meta strong{color:var(--green);font-weight:600}
+
+  .row{display:grid;gap:16px;margin-bottom:16px}
+  .row.r-2{grid-template-columns:1.15fr 1fr}
+  .row.r-2b{grid-template-columns:1fr 1.15fr}
+  .panel{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:20px 22px;box-shadow:var(--shadow)}
+  .panel h2{font-family:'Archivo',sans-serif;font-weight:700;font-size:14px;letter-spacing:.01em}
+  .panel .ph{display:flex;align-items:baseline;justify-content:space-between;margin-bottom:16px;gap:10px}
+  .panel .ph .note{font-size:11.5px;color:var(--slate);text-align:right}
+  .chartbox{position:relative;height:230px}
+
+  .funnel{display:flex;flex-direction:column;gap:9px}
+  .frow{display:grid;grid-template-columns:120px 1fr 54px;align-items:center;gap:12px}
+  .frow .fl{font-size:12.5px;color:var(--ink-soft);font-weight:500}
+  .ftrack{height:30px;background:#F0EDE4;border-radius:8px;overflow:hidden}
+  .fbar{height:100%;border-radius:8px;display:flex;align-items:center;justify-content:flex-end;padding-right:9px;color:#fff;font-size:12px;font-weight:600;font-family:'Archivo',sans-serif;transition:width .5s ease}
+  .frow .fv{text-align:right;font-family:'Archivo',sans-serif;font-weight:700;font-size:14px}
+
+  table{width:100%;border-collapse:collapse;font-size:13px}
+  th,td{text-align:right;padding:11px 10px;border-bottom:1px solid var(--line)}
+  th:first-child,td:first-child{text-align:left}
+  thead th{font-family:'Archivo',sans-serif;font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:var(--ink-soft);font-weight:600;border-bottom:1.5px solid var(--line)}
+  tbody td{font-variant-numeric:tabular-nums}
+  tbody tr:last-child td{border-bottom:none}
+  .agent{display:flex;align-items:center;gap:9px;font-weight:600}
+  .swatch{width:9px;height:9px;border-radius:3px}
+  .sw-h{background:var(--hazel)}.sw-r{background:var(--rachel)}
+  .tot td{font-weight:700;font-family:'Archivo',sans-serif;border-top:1.5px solid var(--line)}
+  .pct{color:var(--green);font-weight:600}
+
+  /* leads feed */
+  .leadbar{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px}
+  .chip{font-family:'Archivo',sans-serif;font-weight:600;font-size:12px;color:var(--ink-soft);background:#F0EDE4;border:1px solid var(--line);border-radius:999px;padding:6px 12px;cursor:pointer;display:inline-flex;gap:7px;align-items:center;transition:.12s}
+  .chip .c{font-variant-numeric:tabular-nums;color:var(--slate);font-weight:600}
+  .chip.on{background:var(--ink);color:#fff;border-color:var(--ink)}
+  .chip.on .c{color:rgba(255,255,255,.6)}
+  .leadlist{margin-top:4px}
+  .lead{display:grid;grid-template-columns:auto 1fr auto;gap:13px;padding:13px 2px;border-bottom:1px solid var(--line);align-items:start}
+  .lead:last-child{border-bottom:none}
+  .ldot{width:9px;height:9px;border-radius:50%;margin-top:5px;flex:none}
+  .s-interested{background:var(--green)}.s-callback{background:var(--ocean)}.s-neutral{background:var(--slate)}.s-notInterested{background:var(--coral)}
+  .lname{font-weight:600;font-size:13.5px;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+  .lch{font-family:'Archivo',sans-serif;font-size:10px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;padding:2px 7px;border-radius:5px}
+  .ch-call{background:#E2F0EF;color:var(--ocean-deep)}.ch-text{background:#FBF3E2;color:#9A6E1E}
+  .lmeta{font-weight:500;color:var(--slate);font-size:12px}
+  .lsum{color:var(--ink-soft);font-size:13px;margin-top:3px}
+  .lright{display:flex;flex-direction:column;align-items:flex-end;gap:5px;white-space:nowrap}
+  .ltag{font-family:'Archivo',sans-serif;font-size:10.5px;font-weight:700;padding:3px 9px;border-radius:6px}
+  .t-interested{background:#E4F4EC;color:#1F7A4F}.t-callback{background:#E2F0EF;color:var(--ocean-deep)}.t-neutral{background:#EEEBE3;color:var(--ink-soft)}.t-notInterested{background:#FBE8E5;color:#B23F31}
+  .lphone{font-size:12px;color:var(--slate)}
+  .lempty{padding:24px 4px;color:var(--slate);font-size:13px;text-align:center}
+
+  footer{margin-top:26px;color:var(--slate);font-size:11.5px;line-height:1.6;border-top:1px solid var(--line);padding-top:16px}
+  footer code{background:#EAE6DC;padding:1px 6px;border-radius:5px;font-size:11px}
+
+  @media(max-width:900px){
+    .kpis{grid-template-columns:repeat(2,1fr)}
+    .row.r-2,.row.r-2b{grid-template-columns:1fr}
+    .rangelabel{margin-left:0;width:100%}
+    body{padding:22px 16px 44px}
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <div class="titles">
+      <h1>White Bay Villas · <span class="accent">Outbound Performance</span></h1>
+      <div class="sub">Calls &amp; texts placed via QUO</div>
+    </div>
+    <div class="controls">
+      <span class="pill" id="modePill">Sample data</span>
+      <div class="agentsel">
+        <select id="agentSel">
+          <option value="all">All agents</option>
+          <option value="Hazel">Hazel</option>
+          <option value="Rachel">Rachel</option>
+        </select>
+      </div>
+    </div>
+  </header>
+
+  <div class="filterbar">
+    <div class="seg" id="seg">
+      <button data-p="today">Today</button>
+      <button data-p="last7" class="on">Last 7 days</button>
+      <button data-p="last30">Last 30 days</button>
+    </div>
+    <div class="vr"></div>
+    <div class="picker">
+      <input type="date" id="from" value="2026-05-24" max="2026-06-22">
+      <span>–</span>
+      <input type="date" id="to" value="2026-06-22" max="2026-06-22">
+      <button class="apply" id="applyRange">Apply</button>
+    </div>
+    <div class="rangelabel"><span class="dot"></span><span id="rangeLabel"></span></div>
+  </div>
+
+  <section class="kpis" id="kpis"></section>
+
+  <div class="row r-2">
+    <div class="panel">
+      <div class="ph"><h2>Call funnel</h2><span class="note">made → connected → interested</span></div>
+      <div class="funnel" id="funnel"></div>
+    </div>
+    <div class="panel">
+      <div class="ph"><h2>Connected-call outcomes</h2><span class="note" id="connNote"></span></div>
+      <div class="chartbox"><canvas id="sentChart"></canvas></div>
+    </div>
+  </div>
+
+  <div class="row r-2b">
+    <div class="panel">
+      <div class="ph"><h2>Hazel vs Rachel</h2><span class="note">calls · ignores agent filter</span></div>
+      <div class="chartbox"><canvas id="agentChart"></canvas></div>
+    </div>
+    <div class="panel">
+      <div class="ph"><h2>Activity trend</h2><span class="note" id="trendNote"></span></div>
+      <div class="chartbox"><canvas id="trendChart"></canvas></div>
+    </div>
+  </div>
+
+  <div class="row r-2">
+    <div class="panel">
+      <div class="ph"><h2>Text funnel</h2><span class="note">sent → delivered → replied → interested</span></div>
+      <div class="funnel" id="textFunnel"></div>
+    </div>
+    <div class="panel">
+      <div class="ph"><h2>Reply sentiment</h2><span class="note">of texts that got a reply</span></div>
+      <div class="chartbox"><canvas id="textSentChart"></canvas></div>
+    </div>
+  </div>
+
+  <div class="panel">
+    <div class="ph"><h2>By agent</h2><span class="note" id="tableNote"></span></div>
+    <table id="agentTable">
+      <thead><tr>
+        <th>Agent</th><th>Calls</th><th>Connected</th><th>Connect %</th>
+        <th>Voicemail</th><th>Interested</th><th>Texts sent</th><th>Replies</th>
+      </tr></thead>
+      <tbody></tbody>
+    </table>
+  </div>
+
+  <div class="panel">
+    <div class="ph"><h2>Leads &amp; messages</h2><span class="note" id="leadNote"></span></div>
+    <div class="leadbar" id="leadbar"></div>
+    <div class="leadlist" id="leadlist"></div>
+  </div>
+
+  <footer>
+    Mockup of the report — numbers are placeholder. The live version pulls from QUO (calls, texts, voicemail status) and classifies each connected call as interested / callback / neutral / not interested using the call summary. Period filters resolve to real date ranges; the custom picker queries any range you set. Live link is interactive; the emailed digest renders the same charts as static images (<code>7:30am daily</code>, <code>Monday 8am weekly</code>).
+  </footer>
+
+</div>
+
+<script>
+const C={ocean:'#0E7C7B',oceanDeep:'#0B5A59',sand:'#C8902E',green:'#2E9E6B',amber:'#E0A93D',coral:'#D9695A',slate:'#8497A0',hazel:'#0E7C7B',rachel:'#C8902E',line:'#E4E0D6',inkSoft:'#5A6B70'};
+Chart.defaults.font.family="'Inter',sans-serif";Chart.defaults.font.size=12;Chart.defaults.color=C.inkSoft;
+
+// deterministic series generator: distributes totals across n days with a weekday/weekend rhythm
+function genSeries(totalMade,totalConn,n){
+  const wk=[1,0.96,1.06,0.99,1.12,0.55,0.42];
+  const w=[];for(let i=0;i<n;i++)w.push(wk[i%7]);
+  const sw=w.reduce((a,b)=>a+b,0);
+  const dist=(tot)=>{let arr=w.map(x=>Math.round(tot*x/sw));let diff=tot-arr.reduce((a,b)=>a+b,0);arr[arr.length-1]+=diff;return arr;};
+  return {made:dist(totalMade),connected:dist(totalConn)};
+}
+function dateLabels(n,endISO){
+  const end=new Date(endISO+'T00:00:00');const out=[];
+  for(let i=n-1;i>=0;i--){const d=new Date(end);d.setDate(end.getDate()-i);out.push((d.getMonth()+1)+'/'+d.getDate());}
+  return out;
+}
+
+const DATA={
+  today:{
+    range:"Today · Fri, Jun 20, 2026",
+    x:["9a","10a","11a","12p","1p","2p","3p","4p","5p"],
+    trendLabel:"by hour",
+    agents:{
+      Hazel:{calls:{made:28,connected:19,voicemail:9},sentiment:{interested:7,callback:3,neutral:5,notInterested:3,wrong:1},texts:{sent:41,delivered:39,replied:14},textSent:{interested:7,neutral:4,notInterested:3},trend:{made:[3,4,4,2,3,4,3,3,2],connected:[2,3,3,1,2,3,2,2,1]}},
+      Rachel:{calls:{made:22,connected:14,voicemail:8},sentiment:{interested:6,callback:2,neutral:4,notInterested:2,wrong:0},texts:{sent:33,delivered:32,replied:12},textSent:{interested:5,neutral:3,notInterested:4},trend:{made:[3,4,3,2,2,3,3,1,1],connected:[2,3,2,1,1,2,2,0,1]}}
+    }
+  },
+  last7:{
+    range:"Last 7 days · Jun 16 – Jun 22, 2026",
+    x:["Mon","Tue","Wed","Thu","Fri","Sat","Sun"],
+    trendLabel:"by day",
+    agents:{
+      Hazel:{calls:{made:142,connected:89,voicemail:53},sentiment:{interested:32,callback:13,neutral:24,notInterested:16,wrong:4},texts:{sent:210,delivered:203,replied:74},textSent:{interested:34,neutral:19,notInterested:21},trend:{made:[24,21,26,22,27,12,10],connected:[16,13,16,14,18,7,5]}},
+      Rachel:{calls:{made:118,connected:71,voicemail:47},sentiment:{interested:26,callback:11,neutral:17,notInterested:15,wrong:2},texts:{sent:175,delivered:169,replied:60},textSent:{interested:27,neutral:16,notInterested:17},trend:{made:[20,18,21,19,23,10,7],connected:[12,11,13,12,15,5,3]}}
+    }
+  },
+  last30:{
+    range:"Last 30 days · May 24 – Jun 22, 2026",
+    x:dateLabels(30,"2026-06-22"),
+    trendLabel:"by day",
+    agents:{
+      Hazel:{calls:{made:598,connected:372,voicemail:226},sentiment:{interested:134,callback:55,neutral:101,notInterested:67,wrong:15},texts:{sent:880,delivered:851,replied:309},textSent:{interested:142,neutral:81,notInterested:86},trend:genSeries(598,372,30)},
+      Rachel:{calls:{made:502,connected:301,voicemail:201},sentiment:{interested:110,callback:46,neutral:73,notInterested:64,wrong:8},texts:{sent:735,delivered:710,replied:252},textSent:{interested:113,neutral:67,notInterested:72},trend:genSeries(502,301,30)}
+    }
+  }
+};
+
+// ============================================================
+//  LIVE DATA  — paste your Supabase project URL + anon key.
+//  Until then the page renders the sample data above.
+//  Data flow: QUO  ->  n8n  ->  Supabase.interactions  ->  here
+// ============================================================
+const CFG={
+  url:'https://hpobuszmkdibaznmufxc.supabase.co',
+  anonKey:'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imhwb2J1c3pta2RpYmF6bm11ZnhjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODIxNDgyOTMsImV4cCI6MjA5NzcyNDI5M30.Wxpg5gx00exGt5nVAw0Se9qj2w0NHjtgLnThmcNBwF4'
+};
+const LIVE = CFG.url && CFG.anonKey && !CFG.url.includes('YOUR') && !CFG.anonKey.includes('YOUR');
+
+let SRC=null, LIVE_LEADS=null;
+const formatHour=h=>h===0?'12a':h<12?h+'a':h===12?'12p':(h-12)+'p';
+function dayList(s,e){const out=[];let d=new Date(s+'T00:00:00');const end=new Date(e+'T00:00:00');while(d<=end){out.push(d.toISOString().slice(0,10));d.setDate(d.getDate()+1);}return out;}
+function liveRange(s,e){
+  if(state.period==='custom')return state.customLabel;
+  const nm={today:'Today',last7:'Last 7 days',last30:'Last 30 days'};
+  const f=x=>new Date(x+'T00:00:00').toLocaleDateString('en-US',{month:'short',day:'numeric'});
+  return (nm[state.period]||'')+' · '+f(s)+' – '+f(e);
+}
+async function fetchRows(s,e){
+  const url=`${CFG.url}/rest/v1/interactions?select=*&occurred_at=gte.${s}T00:00:00&occurred_at=lte.${e}T23:59:59.999&order=occurred_at.asc`;
+  const res=await fetch(url,{headers:{apikey:CFG.anonKey,Authorization:'Bearer '+CFG.anonKey}});
+  if(!res.ok)throw new Error('Supabase '+res.status);
+  return res.json();
+}
+async function buildLive(s,e){
+  const rows=await fetchRows(s,e);
+  const singleDay=s===e; let x,idxOf;
+  if(singleDay){x=Array.from({length:24},(_,h)=>formatHour(h));idxOf=r=>new Date(r.occurred_at).getHours();}
+  else{const days=dayList(s,e);x=days.map(d=>{const p=d.split('-');return (+p[1])+'/'+(+p[2]);});const m=Object.fromEntries(days.map((d,i)=>[d,i]));idxOf=r=>(r.occurred_at.slice(0,10) in m)?m[r.occurred_at.slice(0,10)]:-1;}
+  const mk=()=>({...blank(),trend:{made:x.map(()=>0),connected:x.map(()=>0)}});
+  const agents={Hazel:mk(),Rachel:mk()};const leads=[];
+  rows.forEach(r=>{
+    const a=agents[r.agent];if(!a)return;const i=idxOf(r);
+    if(r.channel==='call'&&r.direction==='outgoing'){
+      a.calls.made++;if(i>=0)a.trend.made[i]++;
+      if(r.connected&&!r.voicemail){a.calls.connected++;if(i>=0)a.trend.connected[i]++;if(r.sentiment&&a.sentiment[r.sentiment]!==undefined)a.sentiment[r.sentiment]++;}
+      else{a.calls.voicemail++;}
+      if(r.summary&&r.connected)leads.push({name:r.contact_name||r.contact_phone,ch:'call',date:r.occurred_at.slice(0,10),agent:r.agent,sent:r.sentiment,sum:r.summary});
+    }else if(r.channel==='text'&&r.direction==='outgoing'){
+      a.texts.sent++;if(r.msg_status==='delivered')a.texts.delivered++;
+      if(r.replied){a.texts.replied++;if(r.sentiment&&a.textSent[r.sentiment]!==undefined)a.textSent[r.sentiment]++;}
+      if(r.summary&&r.replied)leads.push({name:r.contact_name||r.contact_phone,ch:'text',date:r.occurred_at.slice(0,10),agent:r.agent,sent:r.sentiment,sum:r.summary});
+    }
+  });
+  return {range:liveRange(s,e),x,trendLabel:singleDay?'by hour':'by day',agents,leads};
+}
+
+let state={period:'last7',agent:'all',customLabel:null,leadFilter:'positive'};
+function dataKey(){return state.period==='custom'?'last30':state.period;}
+
+function blank(){return {calls:{made:0,connected:0,voicemail:0},sentiment:{interested:0,callback:0,neutral:0,notInterested:0,wrong:0},texts:{sent:0,delivered:0,replied:0},textSent:{interested:0,neutral:0,notInterested:0}};}
+function addInto(t,a){for(const g of ['calls','sentiment','texts','textSent'])for(const k in a[g])t[g][k]+=a[g][k];}
+
+function aggregate(){
+  const p=SRC||DATA[dataKey()];
+  const names=state.agent==='all'?['Hazel','Rachel']:[state.agent];
+  const acc=blank();
+  let made=p.x.map(()=>0),conn=p.x.map(()=>0);
+  names.forEach(n=>{const a=p.agents[n];addInto(acc,a);a.trend.made.forEach((v,i)=>made[i]+=v);a.trend.connected.forEach((v,i)=>conn[i]+=v);});
+  return {range:(state.period==='custom'&&!SRC)?state.customLabel:p.range,x:p.x,trendLabel:p.trendLabel,agg:acc,trend:{made,connected:conn}};
+}
+
+const pct=(n,d)=>d?Math.round(n/d*100):0;
+let charts={};
+const kill=()=>{Object.values(charts).forEach(c=>c&&c.destroy());charts={};};
+
+async function render(){
+  SRC=null; LIVE_LEADS=null;
+  if(LIVE){
+    try{ const w=activeWindow(); const built=await buildLive(w.s,w.e); SRC=built; LIVE_LEADS=built.leads; }
+    catch(err){ console.error('Live fetch failed — showing sample.',err); SRC=null; LIVE_LEADS=null; }
+  }
+  const pill=document.getElementById('modePill');
+  if(SRC){pill.textContent='Live · QUO';pill.style.cssText='color:#1F7A4F;background:#E4F4EC;border-color:#BFE6CF';}
+  else{pill.textContent=LIVE?'Sample · live fetch failed':'Sample data';}
+
+  const v=aggregate(),d=v.agg;
+  document.getElementById('rangeLabel').textContent=v.range;
+  document.getElementById('connNote').textContent=d.calls.connected+" connected calls";
+  document.getElementById('trendNote').textContent=v.trendLabel;
+
+  const connRate=pct(d.calls.connected,d.calls.made), vmRate=pct(d.calls.voicemail,d.calls.made);
+  const intRate=pct(d.sentiment.interested,d.calls.connected), replyRate=pct(d.texts.replied,d.texts.delivered);
+  document.getElementById('kpis').innerHTML=`
+    <div class="kpi"><div class="label">Calls made</div><div class="val num">${d.calls.made}</div><div class="meta">+ ${d.texts.sent} texts sent</div></div>
+    <div class="kpi"><div class="label">Connected</div><div class="val num">${d.calls.connected}</div><div class="meta"><strong>${connRate}%</strong> connect rate</div></div>
+    <div class="kpi k-amber"><div class="label">Voicemail / no answer</div><div class="val num">${d.calls.voicemail}</div><div class="meta">${vmRate}% of calls</div></div>
+    <div class="kpi k-green"><div class="label">Interested</div><div class="val num">${d.sentiment.interested}</div><div class="meta"><strong>${intRate}%</strong> of connected</div></div>
+    <div class="kpi k-sand"><div class="label">Callbacks set</div><div class="val num">${d.sentiment.callback}</div><div class="meta">follow-ups queued</div></div>
+    <div class="kpi"><div class="label">Text reply rate</div><div class="val num">${replyRate}%</div><div class="meta">${d.texts.replied} of ${d.texts.delivered} delivered</div></div>`;
+
+  const made=d.calls.made;
+  document.getElementById('funnel').innerHTML=funnelRows([['Calls made',made,C.ocean],['Connected',d.calls.connected,C.oceanDeep],['Interested',d.sentiment.interested,C.green]],made);
+  document.getElementById('textFunnel').innerHTML=funnelRows([['Sent',d.texts.sent,C.sand],['Delivered',d.texts.delivered,'#B07D26'],['Replied',d.texts.replied,C.ocean],['Interested',d.textSent.interested,C.green]],d.texts.sent);
+
+  kill();
+  charts.sent=new Chart(document.getElementById('sentChart'),{type:'doughnut',
+    data:{labels:['Interested','Callback','Neutral','Not interested','Wrong number'],datasets:[{data:[d.sentiment.interested,d.sentiment.callback,d.sentiment.neutral,d.sentiment.notInterested,d.sentiment.wrong],backgroundColor:[C.green,C.ocean,C.slate,C.coral,'#C9C2B2'],borderColor:'#fff',borderWidth:2}]},
+    options:{cutout:'60%',plugins:{legend:{position:'right',labels:{boxWidth:11,boxHeight:11,padding:11,font:{size:11.5}}}}}});
+
+  const ag=(SRC||DATA[dataKey()]).agents;
+  charts.agent=new Chart(document.getElementById('agentChart'),{type:'bar',
+    data:{labels:['Made','Connected','Interested'],datasets:[
+      {label:'Hazel',data:[ag.Hazel.calls.made,ag.Hazel.calls.connected,ag.Hazel.sentiment.interested],backgroundColor:C.hazel,borderRadius:5,barPercentage:.72,categoryPercentage:.62},
+      {label:'Rachel',data:[ag.Rachel.calls.made,ag.Rachel.calls.connected,ag.Rachel.sentiment.interested],backgroundColor:C.rachel,borderRadius:5,barPercentage:.72,categoryPercentage:.62}]},
+    options:{plugins:{legend:{position:'top',labels:{boxWidth:11,boxHeight:11,padding:14}}},scales:{x:{grid:{display:false}},y:{beginAtZero:true,grid:{color:C.line}}}}});
+
+  charts.trend=new Chart(document.getElementById('trendChart'),{type:'line',
+    data:{labels:v.x,datasets:[
+      {label:'Made',data:v.trend.made,borderColor:C.ocean,backgroundColor:'rgba(14,124,123,.10)',fill:true,tension:.34,pointRadius:v.x.length>14?0:3,pointBackgroundColor:C.ocean,borderWidth:2.5},
+      {label:'Connected',data:v.trend.connected,borderColor:C.sand,backgroundColor:'transparent',fill:false,tension:.34,pointRadius:v.x.length>14?0:3,pointBackgroundColor:C.sand,borderWidth:2.5}]},
+    options:{plugins:{legend:{position:'top',labels:{boxWidth:11,boxHeight:11,padding:14}}},scales:{x:{grid:{display:false},ticks:{maxTicksLimit:10,autoSkip:true}},y:{beginAtZero:true,grid:{color:C.line}}}}});
+
+  charts.textSent=new Chart(document.getElementById('textSentChart'),{type:'doughnut',
+    data:{labels:['Interested','Neutral','Not interested'],datasets:[{data:[d.textSent.interested,d.textSent.neutral,d.textSent.notInterested],backgroundColor:[C.green,C.slate,C.coral],borderColor:'#fff',borderWidth:2}]},
+    options:{cutout:'60%',plugins:{legend:{position:'right',labels:{boxWidth:11,boxHeight:11,padding:11,font:{size:11.5}}}}}});
+
+  // table
+  const names=state.agent==='all'?['Hazel','Rachel']:[state.agent];
+  document.getElementById('tableNote').textContent=state.agent==='all'?'full breakdown':state.agent+' only';
+  const tb=document.querySelector('#agentTable tbody');
+  let rows=names.map(n=>{const a=ag[n];return `<tr>
+    <td><span class="agent"><span class="swatch ${n==='Hazel'?'sw-h':'sw-r'}"></span>${n}</span></td>
+    <td class="num">${a.calls.made}</td><td class="num">${a.calls.connected}</td>
+    <td class="num pct">${pct(a.calls.connected,a.calls.made)}%</td>
+    <td class="num">${a.calls.voicemail}</td><td class="num">${a.sentiment.interested}</td>
+    <td class="num">${a.texts.sent}</td><td class="num">${a.texts.replied}</td></tr>`;}).join('');
+  if(names.length>1){const t=d;rows+=`<tr class="tot"><td>Total</td>
+    <td class="num">${t.calls.made}</td><td class="num">${t.calls.connected}</td>
+    <td class="num">${pct(t.calls.connected,t.calls.made)}%</td><td class="num">${t.calls.voicemail}</td>
+    <td class="num">${t.sentiment.interested}</td><td class="num">${t.texts.sent}</td><td class="num">${t.texts.replied}</td></tr>`;}
+  tb.innerHTML=rows;
+  renderLeads();
+}
+
+function funnelRows(items,base){
+  return items.map(([label,val,color])=>{
+    const w=Math.max(8,Math.round(val/base*100));
+    return `<div class="frow"><div class="fl">${label}</div>
+      <div class="ftrack"><div class="fbar" style="width:${w}%;background:${color}">${Math.round(val/base*100)}%</div></div>
+      <div class="fv num">${val}</div></div>`;
+  }).join('');
+}
+
+document.getElementById('seg').addEventListener('click',e=>{
+  const b=e.target.closest('button');if(!b)return;
+  document.querySelectorAll('#seg button').forEach(x=>x.classList.remove('on'));
+  b.classList.add('on');state.period=b.dataset.p;state.customLabel=null;render();
+});
+document.getElementById('applyRange').addEventListener('click',()=>{
+  const f=document.getElementById('from').value,t=document.getElementById('to').value;if(!f||!t)return;
+  document.querySelectorAll('#seg button').forEach(x=>x.classList.remove('on'));
+  const fmt=s=>{const d=new Date(s+'T00:00:00');return d.toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'});};
+  state.period='custom';state.customLabel='Custom · '+fmt(f)+' – '+fmt(t);render();
+});
+document.getElementById('agentSel').addEventListener('change',e=>{state.agent=e.target.value;render();});
+
+// ---- Leads & messages feed ----
+const LEADS=[
+  {name:"Marcus Reyes",ch:"call",date:"2026-06-22",agent:"Hazel",sent:"interested",sum:"Wants the 4-bedroom villa for a family reunion the week of Aug 11"},
+  {name:"Priya Anand",ch:"text",date:"2026-06-22",agent:"Rachel",sent:"interested",sum:"Asking availability and rates for two villas over New Year's"},
+  {name:"Bianca Rossi",ch:"call",date:"2026-06-22",agent:"Rachel",sent:"interested",sum:"Wants oceanfront for a milestone birthday in December, asked about late checkout"},
+  {name:"John Caldwell",ch:"call",date:"2026-06-21",agent:"Hazel",sent:"callback",sum:"Comparing villas — call back Thursday after he checks dates with his wife"},
+  {name:"Sofia Marchetti",ch:"call",date:"2026-06-21",agent:"Rachel",sent:"interested",sum:"Booking a honeymoon, wants the oceanfront one-bedroom for late September"},
+  {name:"Derek Boyle",ch:"text",date:"2026-06-20",agent:"Hazel",sent:"interested",sum:"Wants to make a reservation in March, asked for the 3-night rate"},
+  {name:"Lauren Whitfield",ch:"call",date:"2026-06-20",agent:"Rachel",sent:"callback",sum:"Corporate retreat for 12 — sending dates, wants a quote"},
+  {name:"Amara Okafor",ch:"call",date:"2026-06-20",agent:"Hazel",sent:"neutral",sum:"General questions on ferry access and parking, no dates yet"},
+  {name:"Greg Tanaka",ch:"text",date:"2026-06-19",agent:"Rachel",sent:"interested",sum:"Ready to book the two-bedroom for Thanksgiving week, asked how to pay deposit"},
+  {name:"Helen Frost",ch:"call",date:"2026-06-19",agent:"Hazel",sent:"notInterested",sum:"Looking for under $200/night — out of range, declined"},
+  {name:"Victor Santos",ch:"call",date:"2026-06-18",agent:"Rachel",sent:"callback",sum:"Group of 8 — call back with multi-villa pricing"},
+  {name:"Nadia Petrova",ch:"text",date:"2026-06-18",agent:"Hazel",sent:"interested",sum:"Asking if Alice's can host a private dinner during her October stay"},
+  {name:"Tom Bradley",ch:"call",date:"2026-06-17",agent:"Rachel",sent:"interested",sum:"Repeat guest, wants the same villa as last year for Christmas week"},
+  {name:"Claire Dubois",ch:"call",date:"2026-06-16",agent:"Hazel",sent:"neutral",sum:"Asked about pet policy and cancellation terms, still deciding"},
+  {name:"Ravi Menon",ch:"text",date:"2026-06-14",agent:"Rachel",sent:"interested",sum:"Wants a villa with a pool for a 5-night anniversary trip in February"},
+  {name:"Patrick Nolan",ch:"call",date:"2026-06-12",agent:"Hazel",sent:"neutral",sum:"General rate inquiry, will discuss with family and circle back"},
+  {name:"Kim Sorensen",ch:"call",date:"2026-06-11",agent:"Hazel",sent:"callback",sum:"Planning a wedding party block — follow up next week with availability"},
+  {name:"Daniel Cho",ch:"call",date:"2026-06-07",agent:"Rachel",sent:"interested",sum:"Booked verbally for July 4th week, sending agreement and deposit link"},
+  {name:"Olivia Hart",ch:"text",date:"2026-06-03",agent:"Hazel",sent:"interested",sum:"Wants the beachfront villa for a girls' trip in November, asked for total"},
+  {name:"Felix Wagner",ch:"call",date:"2026-05-29",agent:"Rachel",sent:"notInterested",sum:"Wanted a single hotel room — we're villas only, not a fit"},
+  {name:"Grace Lin",ch:"call",date:"2026-05-27",agent:"Hazel",sent:"interested",sum:"Family of 6, wants two-bedroom for spring break, ready to reserve"},
+  {name:"Samuel Adeyemi",ch:"text",date:"2026-05-25",agent:"Rachel",sent:"callback",sum:"Call back with group rates for a 10-person reunion"}
+];
+const AREA=['305','646','917','203','718','631','407','857'];
+function activeWindow(){
+  if(state.period==='custom'){return {s:document.getElementById('from').value,e:document.getElementById('to').value};}
+  const map={today:['2026-06-20','2026-06-20'],last7:['2026-06-16','2026-06-22'],last30:['2026-05-24','2026-06-22']};
+  const w=map[state.period]||map.last7;return {s:w[0],e:w[1]};
+}
+const fmtDate=iso=>{const[Y,M,D]=iso.split('-');return (+M)+'-'+(+D)+'-'+Y.slice(2);};
+const isPos=l=>l.sent==='interested'||l.sent==='callback';
+const TAG={interested:'Interested',callback:'Callback',neutral:'Neutral',notInterested:'Not interested'};
+
+function renderLeads(){
+  const w=activeWindow(), f=state.leadFilter;
+  const pool=SRC?(LIVE_LEADS||[]):LEADS;
+  const base=pool.filter(l=>l.date>=w.s && l.date<=w.e && (state.agent==='all'||l.agent===state.agent));
+  const cnt=s=> s==='all'?base.length : s==='positive'?base.filter(isPos).length : base.filter(l=>l.sent===s).length;
+  const defs=[['positive','Positive'],['interested','Interested'],['callback','Callback'],['neutral','Neutral'],['notInterested','Not interested'],['all','All']];
+  document.getElementById('leadbar').innerHTML=defs.map(([v,lab])=>
+    `<button class="chip ${f===v?'on':''}" data-f="${v}">${lab}<span class="c">${cnt(v)}</span></button>`).join('');
+
+  let rows=base.filter(l=> f==='all'?true : f==='positive'?isPos(l) : l.sent===f);
+  const pri={interested:0,callback:1,neutral:2,notInterested:3};
+  rows.sort((a,b)=>(pri[a.sent]-pri[b.sent])||(a.date<b.date?1:-1));
+  document.getElementById('leadNote').textContent=rows.length+' of '+base.length+' in range · newest first';
+
+  const list=document.getElementById('leadlist');
+  if(!rows.length){list.innerHTML='<div class="lempty">No interactions match this filter for the selected range and agent.</div>';return;}
+  list.innerHTML=rows.map((l,i)=>{
+    const phone='('+AREA[i%AREA.length]+') 555-'+String(100+(i*37)%900).padStart(4,'0');
+    return `<div class="lead">
+      <span class="ldot s-${l.sent}"></span>
+      <div class="lmain">
+        <div class="lname">${l.name}<span class="lch ch-${l.ch}">${l.ch==='call'?'Called':'Texted'}</span><span class="lmeta">${fmtDate(l.date)} · ${l.agent}</span></div>
+        <div class="lsum">${l.sum}</div>
+      </div>
+      <div class="lright"><span class="ltag t-${l.sent}">${TAG[l.sent]}</span><span class="lphone num">${phone}</span></div>
+    </div>`;
+  }).join('');
+}
+document.getElementById('leadbar').addEventListener('click',e=>{
+  const b=e.target.closest('.chip');if(!b)return;state.leadFilter=b.dataset.f;renderLeads();
+});
+
+render();
+</script>
+</body>
+</html>
