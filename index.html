@@ -443,8 +443,12 @@ const LEADS=[
 const AREA=['305','646','917','203','718','631','407','857'];
 function activeWindow(){
   if(state.period==='custom'){return {s:document.getElementById('from').value,e:document.getElementById('to').value};}
-  const map={today:['2026-06-20','2026-06-20'],last7:['2026-06-16','2026-06-22'],last30:['2026-05-24','2026-06-22']};
-  const w=map[state.period]||map.last7;return {s:w[0],e:w[1]};
+  const iso=d=>d.toISOString().slice(0,10);
+  const now=new Date();
+  if(state.period==='today')return {s:iso(now),e:iso(now)};
+  const back=state.period==='last30'?29:6;
+  const start=new Date(now); start.setDate(start.getDate()-back);
+  return {s:iso(start),e:iso(now)};
 }
 const fmtDate=iso=>{const[Y,M,D]=iso.split('-');return (+M)+'-'+(+D)+'-'+Y.slice(2);};
 const fmtPhone=p=>{if(!p)return'';const d=(''+p).replace(/\D/g,'').slice(-10);return d.length===10?`(${d.slice(0,3)}) ${d.slice(3,6)}-${d.slice(6)}`:(''+p);};
@@ -485,6 +489,7 @@ document.getElementById('leadbar').addEventListener('click',e=>{
   const b=e.target.closest('.chip');if(!b)return;state.leadFilter=b.dataset.f;renderLeads();
 });
 
+(function(){const iso=d=>d.toISOString().slice(0,10);const now=new Date();const back=new Date(now);back.setDate(back.getDate()-29);const f=document.getElementById('from'),t=document.getElementById('to');if(f){f.max=iso(now);f.value=iso(back);}if(t){t.max=iso(now);t.value=iso(now);}})();
 render();
 </script>
 </body>
