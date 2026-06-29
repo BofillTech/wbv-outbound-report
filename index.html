@@ -111,9 +111,25 @@
     .rangelabel{margin-left:0;width:100%}
     body{padding:22px 16px 44px}
   }
+  /* password gate */
+  #gate{position:fixed;inset:0;z-index:9999;background:#F4F2EC;display:flex;align-items:center;justify-content:center}
+  .gatebox{background:#fff;border:1px solid #E4E0D6;border-radius:16px;padding:34px 30px;width:330px;box-shadow:0 6px 20px rgba(22,40,46,.07);text-align:center}
+  .gatebox .gl{font-family:'Archivo',sans-serif;font-weight:800;font-size:20px;color:#16282E}
+  .gatebox .gs{color:#5A6B70;font-size:12.5px;margin:6px 0 18px}
+  #gatepw{width:100%;box-sizing:border-box;padding:10px 12px;border:1px solid #E4E0D6;border-radius:10px;font-size:14px;margin-bottom:10px;font-family:'Inter',sans-serif}
+  #gatebtn{width:100%;padding:10px;border:none;border-radius:10px;background:#0E7C7B;color:#fff;font-family:'Archivo',sans-serif;font-weight:600;font-size:14px;cursor:pointer}
+  #gatebtn:hover{background:#0B5A59}
+  #gateerr{color:#D9695A;font-size:12px;margin-top:10px;min-height:14px}
 </style>
 </head>
 <body>
+<div id="gate"><div class="gatebox">
+  <div class="gl">White Bay Villas</div>
+  <div class="gs">Outbound Performance · staff access</div>
+  <input id="gatepw" type="password" placeholder="Password" autocomplete="current-password">
+  <button id="gatebtn">Unlock</button>
+  <div id="gateerr"></div>
+</div></div>
 <div class="wrap">
 
   <header>
@@ -260,11 +276,9 @@ const DATA={
 //  Until then the page renders the sample data above.
 //  Data flow: QUO  ->  n8n  ->  Supabase.interactions  ->  here
 // ============================================================
-const CFG={
-  url:'https://hpobuszmkdibaznmufxc.supabase.co',
-  anonKey:'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imhwb2J1c3pta2RpYmF6bm11ZnhjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODIxNDgyOTMsImV4cCI6MjA5NzcyNDI5M30.Wxpg5gx00exGt5nVAw0Se9qj2w0NHjtgLnThmcNBwF4'
-};
-const LIVE = CFG.url && CFG.anonKey && !CFG.url.includes('YOUR') && !CFG.anonKey.includes('YOUR');
+const CFG={ url:'https://hpobuszmkdibaznmufxc.supabase.co', anonKey:null };
+const ENC={ct:"t9T/JOa9mbmI8JurYVoAara6vPgSJwoR7RJpxzEpclJdgn6p+P5ny1VEQDg7wVx4LYTvYbNF+cwNepY3MK1tjNcKN9p8vlo6cp4Ev8138ZpqZQhMzPbKK4MXOqf1BJfAy+f2kyfkC6nliF3cWcULs3VJ/enthJoHBIFdJKP6Z0goEUp0hEXGOsnd1D8Uoe5Qr68DNnobdVQu+eb+BmC/lSa/njd7iFkoDRmnhPdk8UQaqHwGKWXWa9HilFM7evbKnFNgP/fShd7Gq+G9/+8DgvPWsOjRa4yLjbUdgGvjT7o=",salt:"tOM1HHFfXKNm7G39e/tYnA==",iv:"7r/nkCS2C4drjszB",iters:310000};
+let LIVE = false;
 
 let SRC=null, LIVE_LEADS=null;
 const formatHour=h=>h===0?'12a':h<12?h+'a':h===12?'12p':(h-12)+'p';
@@ -294,11 +308,11 @@ async function buildLive(s,e){
       a.calls.made++;if(i>=0)a.trend.made[i]++;
       if(r.connected&&!r.voicemail){a.calls.connected++;if(i>=0)a.trend.connected[i]++;if(r.sentiment&&a.sentiment[r.sentiment]!==undefined)a.sentiment[r.sentiment]++;}
       else{a.calls.voicemail++;}
-      if(r.summary&&r.connected)leads.push({name:r.contact_name||null,phone:r.contact_phone,ch:'call',date:r.occurred_at.slice(0,10),agent:r.agent,sent:r.sentiment,sum:r.summary});
+      if(r.summary&&r.connected)leads.push({name:r.contact_name||null,phone:r.contact_phone,ch:'call',date:r.occurred_at.slice(0,10),dt:r.occurred_at,agent:r.agent,sent:r.sentiment,sum:r.summary});
     }else if(r.channel==='text'&&r.direction==='outgoing'){
       a.texts.sent++;if(r.msg_status==='delivered')a.texts.delivered++;
       if(r.replied){a.texts.replied++;if(r.sentiment&&a.textSent[r.sentiment]!==undefined)a.textSent[r.sentiment]++;}
-      if(r.summary&&r.replied)leads.push({name:r.contact_name||null,phone:r.contact_phone,ch:'text',date:r.occurred_at.slice(0,10),agent:r.agent,sent:r.sentiment,sum:r.summary});
+      if(r.summary&&r.replied)leads.push({name:r.contact_name||null,phone:r.contact_phone,ch:'text',date:r.occurred_at.slice(0,10),dt:r.occurred_at,agent:r.agent,sent:r.sentiment,sum:r.summary});
     }
   });
   return {range:liveRange(s,e),x,trendLabel:singleDay?'by hour':'by day',agents,leads};
@@ -452,6 +466,7 @@ function activeWindow(){
 }
 const fmtDate=iso=>{const[Y,M,D]=iso.split('-');return (+M)+'-'+(+D)+'-'+Y.slice(2);};
 const fmtPhone=p=>{if(!p)return'';const d=(''+p).replace(/\D/g,'').slice(-10);return d.length===10?`(${d.slice(0,3)}) ${d.slice(3,6)}-${d.slice(6)}`:(''+p);};
+const fmtTime=iso=>{if(!iso)return'';const d=new Date(iso);let h=d.getHours();const m=d.getMinutes();const ap=h<12?'AM':'PM';h=h%12||12;return h+':'+String(m).padStart(2,'0')+' '+ap;};
 const isPos=l=>l.sent==='interested'||l.sent==='callback';
 const TAG={interested:'Interested',callback:'Callback',neutral:'Neutral',notInterested:'Not interested',wrong:'Wrong number'};
 
@@ -478,7 +493,7 @@ function renderLeads(){
     return `<div class="lead">
       <span class="ldot s-${l.sent}"></span>
       <div class="lmain">
-        <div class="lname">${title}<span class="lch ch-${l.ch}">${l.ch==='call'?'Called':'Texted'}</span><span class="lmeta">${fmtDate(l.date)} · ${l.agent}</span></div>
+        <div class="lname">${title}<span class="lch ch-${l.ch}">${l.ch==='call'?'Called':'Texted'}</span><span class="lmeta">${fmtDate(l.date)}${l.dt?' · '+fmtTime(l.dt):''} · ${l.agent}</span></div>
         <div class="lsum">${l.sum}</div>
       </div>
       <div class="lright"><span class="ltag t-${l.sent||'neutral'}">${TAG[l.sent]||'—'}</span>${rightPhone}</div>
@@ -490,7 +505,11 @@ document.getElementById('leadbar').addEventListener('click',e=>{
 });
 
 (function(){const iso=d=>d.toISOString().slice(0,10);const now=new Date();const back=new Date(now);back.setDate(back.getDate()-29);const f=document.getElementById('from'),t=document.getElementById('to');if(f){f.max=iso(now);f.value=iso(back);}if(t){t.max=iso(now);t.value=iso(now);}})();
-render();
+async function unlock(pw){const b=s=>Uint8Array.from(atob(s),c=>c.charCodeAt(0));const bk=await crypto.subtle.importKey('raw',new TextEncoder().encode(pw),'PBKDF2',false,['deriveKey']);const key=await crypto.subtle.deriveKey({name:'PBKDF2',salt:b(ENC.salt),iterations:ENC.iters,hash:'SHA-256'},bk,{name:'AES-GCM',length:256},false,['decrypt']);const pt=await crypto.subtle.decrypt({name:'AES-GCM',iv:b(ENC.iv)},key,b(ENC.ct));return new TextDecoder().decode(pt);}
+async function tryUnlock(){const e=document.getElementById('gateerr');e.textContent='Checking…';try{const k=await unlock(document.getElementById('gatepw').value);if(!/^eyJ/.test(k))throw 0;CFG.anonKey=k;LIVE=true;document.getElementById('gate').style.display='none';render();}catch(err){e.textContent='Incorrect password';}}
+document.getElementById('gatebtn').addEventListener('click',tryUnlock);
+document.getElementById('gatepw').addEventListener('keydown',e=>{if(e.key==='Enter')tryUnlock();});
+document.getElementById('gatepw').focus();
 </script>
 </body>
 </html>
