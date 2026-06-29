@@ -111,6 +111,10 @@
     .rangelabel{margin-left:0;width:100%}
     body{padding:22px 16px 44px}
   }
+  .lfollow{display:flex;align-items:center;gap:5px;font-size:11px;color:#5A6B70;cursor:pointer;margin-top:7px;user-select:none;white-space:nowrap}
+  .lfollow input{cursor:pointer;width:13px;height:13px;accent-color:#0E7C7B;margin:0}
+  .lfollow.done{color:#0E7C7B;font-weight:600}
+  .lead.isdone{opacity:.7}
   /* password gate */
   #gate{position:fixed;inset:0;z-index:9999;background:#F4F2EC;display:flex;align-items:center;justify-content:center}
   .gatebox{background:#fff;border:1px solid #E4E0D6;border-radius:16px;padding:34px 30px;width:330px;box-shadow:0 6px 20px rgba(22,40,46,.07);text-align:center}
@@ -308,11 +312,11 @@ async function buildLive(s,e){
       a.calls.made++;if(i>=0)a.trend.made[i]++;
       if(r.connected&&!r.voicemail){a.calls.connected++;if(i>=0)a.trend.connected[i]++;if(r.sentiment&&a.sentiment[r.sentiment]!==undefined)a.sentiment[r.sentiment]++;}
       else{a.calls.voicemail++;}
-      if(r.summary&&r.connected)leads.push({name:r.contact_name||null,phone:r.contact_phone,ch:'call',date:r.occurred_at.slice(0,10),dt:r.occurred_at,agent:r.agent,sent:r.sentiment,sum:r.summary});
+      if(r.summary&&r.connected)leads.push({name:r.contact_name||null,phone:r.contact_phone,ch:'call',date:r.occurred_at.slice(0,10),dt:r.occurred_at,agent:r.agent,sent:r.sentiment,sum:r.summary,id:r.quo_id,followed:!!r.followed_up});
     }else if(r.channel==='text'&&r.direction==='outgoing'){
       a.texts.sent++;if(r.msg_status==='delivered')a.texts.delivered++;
       if(r.replied){a.texts.replied++;if(r.sentiment&&a.textSent[r.sentiment]!==undefined)a.textSent[r.sentiment]++;}
-      if(r.summary&&r.replied)leads.push({name:r.contact_name||null,phone:r.contact_phone,ch:'text',date:r.occurred_at.slice(0,10),dt:r.occurred_at,agent:r.agent,sent:r.sentiment,sum:r.summary});
+      if(r.summary&&r.replied)leads.push({name:r.contact_name||null,phone:r.contact_phone,ch:'text',date:r.occurred_at.slice(0,10),dt:r.occurred_at,agent:r.agent,sent:r.sentiment,sum:r.summary,id:r.quo_id,followed:!!r.followed_up});
     }
   });
   return {range:liveRange(s,e),x,trendLabel:singleDay?'by hour':'by day',agents,leads};
@@ -490,16 +494,25 @@ function renderLeads(){
     const realPhone=l.phone?fmtPhone(l.phone):('('+AREA[i%AREA.length]+') 555-'+String(100+(i*37)%900).padStart(4,'0'));
     const title=l.name||realPhone;
     const rightPhone=l.name?`<span class="lphone num">${realPhone}</span>`:'';
-    return `<div class="lead">
+    return `<div class="lead${l.followed?' isdone':''}">
       <span class="ldot s-${l.sent}"></span>
       <div class="lmain">
         <div class="lname">${title}<span class="lch ch-${l.ch}">${l.ch==='call'?'Called':'Texted'}</span><span class="lmeta">${fmtDate(l.date)}${l.dt?' · '+fmtTime(l.dt):''} · ${l.agent}</span></div>
         <div class="lsum">${l.sum}</div>
       </div>
-      <div class="lright"><span class="ltag t-${l.sent||'neutral'}">${TAG[l.sent]||'—'}</span>${rightPhone}</div>
+      <div class="lright"><span class="ltag t-${l.sent||'neutral'}">${TAG[l.sent]||'—'}</span>${rightPhone}<label class="lfollow${l.followed?' done':''}"><input type="checkbox" class="lf" data-id="${l.id||''}"${l.followed?' checked':''}>Followed up</label></div>
     </div>`;
   }).join('');
 }
+document.getElementById('leadlist').addEventListener('change',async e=>{
+  const cb=e.target.closest('input.lf');if(!cb)return;
+  const id=cb.dataset.id,val=cb.checked;const lead=cb.closest('.lead'),lab=cb.closest('.lfollow');
+  if(!id||!CFG.anonKey){cb.checked=!val;return;}
+  lead.classList.toggle('isdone',val);lab.classList.toggle('done',val);
+  if(LIVE_LEADS){const L=LIVE_LEADS.find(x=>x.id===id);if(L)L.followed=val;}
+  try{const r=await fetch(CFG.url+'/rest/v1/interactions?quo_id=eq.'+encodeURIComponent(id),{method:'PATCH',headers:{'apikey':CFG.anonKey,'Authorization':'Bearer '+CFG.anonKey,'Content-Type':'application/json','Prefer':'return=minimal'},body:JSON.stringify({followed_up:val,followed_up_at:val?new Date().toISOString():null})});if(!r.ok)throw new Error(r.status);}
+  catch(err){cb.checked=!val;lead.classList.toggle('isdone',!val);lab.classList.toggle('done',!val);if(LIVE_LEADS){const L=LIVE_LEADS.find(x=>x.id===id);if(L)L.followed=!val;}alert('Could not save the follow-up status. Please try again.');}
+});
 document.getElementById('leadbar').addEventListener('click',e=>{
   const b=e.target.closest('.chip');if(!b)return;state.leadFilter=b.dataset.f;renderLeads();
 });
